@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>New York 13–18 novembre 2026</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23FFC233'/><text x='50' y='50' font-family='-apple-system,system-ui,sans-serif' font-size='44' font-weight='800' fill='%2316110A' text-anchor='middle' dominant-baseline='central'>NY</text></svg>">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link href="css/tokens.css?v=6" rel="stylesheet">
+<link href="css/style.css?v=6" rel="stylesheet">
+</head>
+<body>
+
+<!-- ============ schermata di accesso ============ -->
+<div id="gate" class="gate" hidden>
+  <form id="loginForm" class="gatecard" autocomplete="on">
+    <div class="gatehead">
+      <span class="logo" aria-hidden="true">NY</span>
+      <div>
+        <h1>New York</h1>
+        <p>13 – 18 novembre 2026</p>
+      </div>
+    </div>
+
+    <p class="gateintro">Entra col tuo account per ritrovare il tuo itinerario su qualsiasi dispositivo.</p>
+
+    <label class="gatefield">
+      <span>Email</span>
+      <input id="gateEmail" type="email" name="email" autocomplete="username"
+             required placeholder="nome@esempio.it">
+    </label>
+
+    <label class="gatefield">
+      <span>Password</span>
+      <input id="gatePwd" type="password" name="password" autocomplete="current-password"
+             required placeholder="••••••••">
+    </label>
+
+    <p id="gateErr" class="gateerr" role="alert" hidden></p>
+
+    <button id="gateBtn" type="submit" class="gatego">Entra</button>
+
+    <button id="gateLocal" type="button" class="gatelocal">
+      Continua senza account — salva solo su questo dispositivo
+    </button>
+
+    <p id="gateNote" class="gatenote" hidden></p>
+  </form>
+</div>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">NY</span>
+    <div>
+      <h1>New York</h1>
+      <p>13 – 18 novembre 2026</p>
+    </div>
+  </div>
+
+  <nav id="dayTabs" class="daytabs"></nav>
+
+  <div class="topactions">
+    <button id="btnExport"  class="btn ghost" title="Salva un file con il vostro programma"><span class="bi">⬇</span><span class="bl"> Esporta</span></button>
+    <button id="btnImport"  class="btn ghost" title="Carica un programma condiviso"><span class="bi">⬆</span><span class="bl"> Importa</span></button>
+    <button id="btnPrint"   class="btn ghost" title="Stampa / PDF del programma"><span class="bi">🖨</span><span class="bl"> Stampa</span></button>
+    <button id="btnReset" aria-label="Cancella tutto il programma"   class="btn ghost danger" title="Cancella tutto">✕</button>
+    <input type="file" id="fileImport" accept=".json" hidden>
+  </div>
+
+  <div id="account" class="account" hidden>
+    <span id="syncState" class="syncstate" title="Stato del salvataggio"></span>
+    <button id="btnAccount" class="chipuser" aria-haspopup="true" aria-expanded="false">
+      <span id="userInitials" class="uinit" aria-hidden="true"></span>
+      <span id="userName" class="uname"></span>
+    </button>
+    <div id="accountMenu" class="accmenu" hidden>
+      <p id="userEmail" class="accmail"></p>
+      <button id="btnSyncNow" class="accitem">Sincronizza adesso</button>
+      <button id="btnPassword" class="accitem">Cambia password</button>
+      <button id="btnLogout" class="accitem danger">Esci</button>
+    </div>
+  </div>
+</header>
+
+<div id="mobileTabs" class="mobiletabs">
+  <button data-pane="left"  class="on">Luoghi</button>
+  <button data-pane="map">Mappa</button>
+  <button data-pane="right">Programma</button>
+</div>
+
+<main id="layout">
+
+  <!-- ============ SINISTRA: catalogo ============ -->
+  <aside id="left" class="pane on">
+    <div class="searchrow">
+      <input id="q" type="search" aria-label="Cerca fra i luoghi" placeholder="Cerca un luogo, un quartiere…">
+      <button id="btnClearFilters" class="btn tiny ghost">Azzera</button>
+    </div>
+
+    <div class="filterblock">
+      <div class="flabel">Categorie</div>
+      <div id="catFilters" class="chips"></div>
+    </div>
+
+    <div class="filterblock">
+      <div class="flabel">Prezzo</div>
+      <div id="priceFilters" class="chips">
+        <button class="chip" data-price="0">Gratis</button>
+        <button class="chip" data-price="1">$</button>
+        <button class="chip" data-price="2">$$</button>
+        <button class="chip" data-price="3">$$$</button>
+      </div>
+    </div>
+
+    <div class="filterblock">
+      <div class="flabel">Momento della giornata</div>
+      <div id="slotFilters" class="chips">
+        <button class="chip" data-slot="mat">🌅 Mattino</button>
+        <button class="chip" data-slot="pom">☀️ Pomeriggio</button>
+        <button class="chip" data-slot="sera">🌆 Sera</button>
+        <button class="chip" data-slot="notte">🌙 Notte</button>
+      </div>
+    </div>
+
+    <div class="listhead"><span id="count"></span><span class="hint">clicca una scheda per centrarla sulla mappa</span></div>
+    <div id="list" class="list"></div>
+  </aside>
+
+  <!-- ============ CENTRO: mappa 3D ============ -->
+  <div class="resizer" id="rzL" title="Trascina per allargare · doppio click per reimpostare"></div>
+
+  <section id="mapwrap" class="pane">
+    <div id="map"></div>
+    <div id="vistaSel" class="vistasel">
+      <button data-vista="esplora">Esplora</button>
+      <button data-vista="mix" class="on">Entrambi</button>
+      <button data-vista="itin">Itinerario</button>
+    </div>
+    <div class="maptools">
+      <div class="mtgroup">
+        <button id="btnZin" aria-label="Ingrandisci la mappa"  class="btn map" title="Ingrandisci">+</button>
+        <button id="btnZout" aria-label="Riduci la mappa" class="btn map" title="Riduci">−</button>
+      </div>
+      <div class="mtgroup">
+        <button id="btn3d" aria-label="Inclina la vista in 3D"     class="btn map" title="Inclina la vista / vista dall'alto">3D</button>
+        <button id="btnNord" aria-label="Rimetti la mappa a nord"   class="btn map" title="Rimetti la mappa a nord">↑</button>
+      </div>
+      <div class="mtgroup">
+        <button id="btnFit" aria-label="Inquadra tutti i luoghi"    class="btn map" title="Inquadra tutti i luoghi visibili">⤢</button>
+        <button id="btnDayFit" aria-label="Inquadra il giorno selezionato" class="btn map" title="Inquadra il giorno selezionato">◎</button>
+      </div>
+    </div>
+
+    <div id="legendBox" class="legendbox">
+      <button id="legendBtn" class="legendbtn" aria-expanded="false" title="Mostra la legenda">Legenda</button>
+      <div id="legend" class="legend"></div>
+    </div>
+  </section>
+
+  <div class="resizer" id="rzR" title="Trascina per allargare · doppio click per reimpostare"></div>
+
+  <!-- ============ DESTRA: programma del giorno ============ -->
+  <aside id="right" class="pane">
+    <div id="dayHeader" class="dayheader"></div>
+    <div id="planner" class="planner"></div>
+    <div id="dayFoot" class="dayfoot"></div>
+  </aside>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<!-- Vista di stampa, generata al volo -->
+<div id="printview"></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+<script src="data/poi.js?v=6"></script>
+<script src="js/config.js?v=6"></script>
+<script src="js/cloud.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
+</body>
+</html>

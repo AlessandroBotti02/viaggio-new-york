@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+._*
+
+# configurazione locale dell'editor / Claude Code
+.claude/
+
+# chiavi e configurazioni private: MAI nel repo
+docs/js/config.local.js
+
+# il banco di prova non deve finire nella cartella pubblicata
+docs/_finto-supabase.js
+docs/_test.html

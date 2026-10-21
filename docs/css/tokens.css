@@ -1,0 +1,109 @@
+/* =========================================================
+   NEW YORK '26 — design tokens
+   Il tema segue l'impostazione di sistema (chiaro / scuro):
+   nessun interruttore nell'app, come da dark-mode.md › Best practices
+   ("Avoid offering an app-specific appearance setting").
+   Tutti i rapporti di contrasto indicati sono calcolati, non stimati.
+   ========================================================= */
+:root{
+  /* --- superfici (scuro) --- */
+  --bg:#0A0E16;        /* canvas */
+  --bg2:#111725;       /* sidebar */
+  --bg3:#18202F;       /* card sollevata */
+  --bg4:#1F2940;       /* campo / hover */
+  --line:#232E44;
+  --line2:#31405C;
+
+  /* --- contenuto --- */
+  --tx:#E9EEF7;        /* 14.0:1 su --bg3 */
+  --tx2:#9AA7BD;       /*  6.7:1 su --bg3 */
+  --tx3:#8A98B0;       /*  6.6:1 su --bg, 5.0:1 su --bg4 */
+
+  /* --- identità: il giallo dei taxi. Significa una cosa sola:
+         "questo fa parte dell'itinerario / è selezionato". --- */
+  --itin:#FFC233;      /* riempimenti: pastiglie, linea, selezione */
+  --itinTx:#FFC233;    /* lo stesso colore quando fa da TESTO (10.1:1 su --bg3) */
+  --onAcc:#16110A;     /* testo sopra --itin: 11.6:1 */
+  --acc:var(--itin);
+
+  /* --- segnali --- */
+  --ok:#30D158;        /* gratis            — 7.1:1 su --okBg */
+  --bad:#FF7A72;       /* da prenotare      — 6.2:1 su --badBg */
+  --info:#6FC8F7;      /* nota di novembre  — 8.1:1 su --infoBg */
+  /* fondi tinti OPACHI: niente color-mix trasparente sotto il testo,
+     altrimenti il contrasto reale dipende da cosa c'è sotto */
+  --okBg:#12301E; --badBg:#3A1A18; --infoBg:#10293A; --itinBg:#2E2205;
+
+  /* --- materiale del layer funzionale (solo barre flottanti) --- */
+  --glass:rgba(12,17,28,.86);
+  --glassLine:rgba(255,255,255,.10);
+  --blur:blur(20px) saturate(1.5);
+  --shadow:0 8px 28px rgba(0,0,0,.45);
+  --shadowUp:0 2px 8px rgba(0,0,0,.35);
+
+  /* --- forma --- */
+  --r:14px; --r2:10px; --r3:8px;
+
+  /* --- tipografia: font di sistema, scala desktop HIG
+         (corpo 13px, minimo 10px) --- */
+  --fs-display:17px; --fs-title:15px; --fs-body:13px;
+  --fs-small:12px;   --fs-caption:11px; --fs-micro:10px;
+
+  --lw:320px; --rw:340px;
+  --h:60px; --mh:0px;
+
+  color-scheme:dark;
+}
+
+/* ---------- tema chiaro ---------- */
+@media (prefers-color-scheme:light){
+  :root{
+    --bg:#EEF1F6;
+    --bg2:#FFFFFF;
+    --bg3:#F4F6FA;
+    --bg4:#E7ECF3;
+    --line:#DCE2EC;
+    --line2:#C3CCDA;
+
+    --tx:#12161F;      /* 16.7:1 su --bg3 */
+    --tx2:#59637A;     /*  6.0:1 su bianco */
+    --tx3:#5A6478;     /*  6.0:1 su bianco, 5.0:1 su --bg4 */
+
+    /* il giallo taxi resta identico come riempimento; come testo serve
+       una variante scura, altrimenti su superfici chiare non arriva a 4.5:1 */
+    --itin:#FFC233;
+    --itinTx:#8A5A00;  /* 5.9:1 su bianco, 5.5:1 su --bg3 */
+    --onAcc:#16110A;   /* 11.6:1 sopra --itin */
+
+    --ok:#12652F;      /* 6.1:1 su --okBg */
+    --bad:#A32B1F;     /* 5.9:1 su --badBg */
+    --info:#0369A1;    /* 5.0:1 su --infoBg */
+    --okBg:#DCF3E3; --badBg:#FBE3E0; --infoBg:#DDEEF9; --itinBg:#FBEFD2;
+
+    --glass:rgba(255,255,255,.88);
+    --glassLine:rgba(10,14,22,.10);
+    --shadow:0 8px 28px rgba(16,24,40,.14);
+    --shadowUp:0 2px 8px rgba(16,24,40,.10);
+
+    color-scheme:light;
+  }
+}
+
+/* ---------- accessibilità: trasparenza ridotta ---------- */
+@media (prefers-reduced-transparency:reduce){
+  :root{ --glass:var(--bg2); --blur:none }
+}
+/* ---------- accessibilità: contrasto aumentato ---------- */
+@media (prefers-contrast:more){
+  :root{ --tx2:#C3CEDF; --tx3:#AAB7CA; --line:#44536F; --line2:#5B6C8C }
+}
+@media (prefers-contrast:more) and (prefers-color-scheme:light){
+  :root{ --tx2:#3C4556; --tx3:#434D60; --line:#9AA6B8; --line2:#7C8AA0 }
+}
+/* ---------- accessibilità: movimento ridotto ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important; animation-iteration-count:1!important;
+    transition-duration:.01ms!important; scroll-behavior:auto!important;
+  }
+}
