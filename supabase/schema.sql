@@ -25,7 +25,7 @@ alter table public.itinerari enable row level security;
 drop policy if exists "leggi il proprio itinerario"    on public.itinerari;
 drop policy if exists "crea il proprio itinerario"     on public.itinerari;
 drop policy if exists "aggiorna il proprio itinerario" on public.itinerari;
-drop policy if exists "cancella il proprio itinerario" on public.itinerari;
+drop policy if exists "cancella il proprio itinerario" on public.itinerari;  -- rimossa: vedi sotto
 
 create policy "leggi il proprio itinerario"
   on public.itinerari for select to authenticated
@@ -44,9 +44,9 @@ create policy "aggiorna il proprio itinerario"
   using      ( (select auth.uid()) = user_id )
   with check ( (select auth.uid()) = user_id );
 
-create policy "cancella il proprio itinerario"
-  on public.itinerari for delete to authenticated
-  using ( (select auth.uid()) = user_id );
+-- Nessuna policy per DELETE, di proposito: l'app non cancella mai una riga.
+-- Anche "Cancella tutto" salva semplicemente un programma vuoto.
+-- Senza policy, DELETE è vietato a tutti: una garanzia in più, gratis.
 
 -- 4. aggiornato_il viene messo dal database, non dal browser:
 --    così nessuno può falsificare la data per vincere un conflitto.
@@ -67,10 +67,24 @@ create trigger trg_itinerari_aggiornato
   before insert or update on public.itinerari
   for each row execute function public.tocca_aggiornato_il();
 
--- Cintura e bretelle: togliamo proprio il permesso di scrivere quella colonna.
--- Serve a evitare che un client manomesso falsifichi la data per vincere
+-- Cintura e bretelle: togliamo il permesso di scrivere quella colonna.
+--
+-- ⚠️ Non basta un "revoke update (aggiornato_il)": la documentazione PostgreSQL
+-- è esplicita — "if a role has been granted privileges on a table, then revoking
+-- the same privileges from individual columns will have no effect". Supabase
+-- concede UPDATE sull'INTERA tabella, quindi un revoke per colonna sarebbe
+-- decorativo. Si azzera tutto e si riconcede solo ciò che serve davvero.
+revoke all on table public.itinerari from anon, authenticated;
+
+grant select                     on table public.itinerari to authenticated;
+grant insert (user_id, piano)    on table public.itinerari to authenticated;
+grant update (piano)             on table public.itinerari to authenticated;
+-- Niente delete e niente scrittura su aggiornato_il: quella data la mette
+-- solo il trigger qui sopra, e nessun client può falsificarla per vincere
 -- il confronto fra due dispositivi.
-revoke update (aggiornato_il) on public.itinerari from authenticated, anon;
+--
+-- Nota per il futuro: se aggiungi una colonna, ricordati di concederla qui,
+-- altrimenti il sito non riuscirà a scriverla.
 
 -- 5. Quando crei un utente dal pannello, gli prepariamo la riga vuota.
 create or replace function public.crea_itinerario_vuoto()

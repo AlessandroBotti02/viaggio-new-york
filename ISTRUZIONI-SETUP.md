@@ -21,10 +21,11 @@ nel browser di chi lo usa, senza account.
 
 Il piano gratuito basta e avanza: siete sei persone che salvano una manciata di righe.
 
-> ⚠️ I progetti gratuiti vengono **messi in pausa dopo una settimana senza accessi**.
-> Se tornate sul sito dopo un mese di silenzio, il primo accesso può dare errore:
-> basta entrare nel pannello Supabase e premere **Restore project**.
-> Prima della partenza, apritelo almeno una volta a settimana.
+> ⚠️ I progetti gratuiti vengono **messi in pausa dopo circa una settimana senza accessi**.
+> Non si perde niente: i dati restano e si ripristinano dal pannello con **Restore project**
+> entro un anno. Ma il primo che apre il sito dopo la pausa si vede un errore di connessione.
+> Da qui a novembre, apri il pannello Supabase ogni tanto — e **controlla la settimana prima
+> di partire**, così nessuno trova il sito muto mentre siete in giro per New York.
 
 ### 2. Crea la tabella
 1. Nel menù a sinistra: **SQL Editor** → **New query**.
@@ -56,7 +57,9 @@ creato, scendi a **User Metadata**, e aggiungi `nome` con il valore `Marco`. È 
 ### 5. Prendi le due chiavi
 1. In alto a destra l'ingranaggio: **Project Settings** → **API Keys**.
 2. Copia **Project URL** (una cosa tipo `https://abcdefgh.supabase.co`).
-3. Copia la chiave **pubblica** — si chiama `anon` `public`, oppure `publishable`.
+3. Copia la chiave **pubblica**. Se ne vedi due, prendi quella che inizia con
+   **`sb_publishable_...`**: le vecchie chiavi `anon` (quelle lunghe che iniziano con `eyJ...`)
+   funzionano ancora ma Supabase le sta dismettendo entro fine 2026. Vanno bene entrambe oggi.
    ⚠️ **NON** quella chiamata `service_role` o `secret`: quella scavalca tutte le protezioni
    e non deve uscire dal pannello.
 4. Apri il file **`docs/js/config.js`** e incolla i due valori fra le virgolette:
@@ -132,9 +135,16 @@ Nel **SQL Editor** di Supabase incolla questo e premi Run:
 select relname, relrowsecurity
 from pg_class where relname = 'itinerari';
 
--- 2. Quante regole ci sono? Devono essere quattro.
+-- 2. Le regole: devono essere TRE (lettura, creazione, modifica).
+--    Non c'è quella di cancellazione, ed è voluto: nessuno può cancellare righe.
 select policyname, cmd, roles
 from pg_policies where tablename = 'itinerari';
+
+-- 3. I permessi sulle colonne: 'authenticated' NON deve poter scrivere aggiornato_il.
+select grantee, privilege_type, column_name
+from information_schema.column_privileges
+where table_name = 'itinerari' and grantee = 'authenticated'
+order by privilege_type, column_name;
 ```
 
 Poi la prova del nove — fingiamo di essere un utente qualsiasi e proviamo a leggere tutto:

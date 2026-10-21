@@ -311,7 +311,9 @@ async function esci(){
   clearTimeout(timer);
   if(sporco || inVolo){ try{ await scrivi(api.pianoLocale()); }catch(e){} }
   scriviLocale(chiaveLocale(), api.pianoLocale());   // cache dell'account, per il prossimo accesso
-  try{ await sb.auth.signOut(); }catch(e){}
+  /* scope "local": esce solo da questo dispositivo. Il default di Supabase è
+     "global", che butterebbe fuori la stessa persona anche dal telefono. */
+  try{ await sb.auth.signOut({ scope: "local" }); }catch(e){}
   utente = null; visto = null; token = null; modo = "locale";
   sporco = false; bloccato = false;
   try{ localStorage.removeItem(K_MODO); }catch(e){}
