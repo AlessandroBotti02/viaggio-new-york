@@ -76,30 +76,40 @@ la pagina. A proteggere i dati sono le regole del punto 2, non il segreto della 
 
 ## Parte 2 — Pubblicare il sito (GitHub)
 
-Se me lo chiedi lo faccio io con due comandi. Altrimenti, a mano:
+**Dimmi "pubblica" e lo faccio io**: è tutto pronto e già salvato in un commit locale,
+con l'indirizzo email schermato così la tua email aziendale non finisce online.
+
+Se preferisci farlo a mano, sono tre comandi:
 
 ```bash
-cd "/Users/bots/Downloads/Personale/Viaggio New York/viaggio"
-git add -A
-git commit -m "Viaggio New York: guida, pianificatore e accesso utenti"
-gh repo create viaggio-new-york --public --source=. --push
+cd "/Users/bots/Downloads/Personale/Viaggio New York/viaggio" && git add -A && git commit -m "configurazione Supabase"
 ```
-
-Poi attivare le pagine:
 
 ```bash
-gh api -X POST repos/AlessandroBotti02/viaggio-new-york/pages \
-  -f "source[branch]=main" -f "source[path]=/docs"
+cd "/Users/bots/Downloads/Personale/Viaggio New York/viaggio" && gh repo create viaggio-new-york --public --source=. --push
 ```
 
-Dopo un paio di minuti il sito è su:
+```bash
+gh api -X POST repos/AlessandroBotti02/viaggio-new-york/pages -f "source[branch]=main" -f "source[path]=/docs"
+```
+
+Dopo un paio di minuti il sito è su
 **https://alessandrobotti02.github.io/viaggio-new-york**
 
-Ogni volta che cambi qualcosa:
+Da lì in poi, ogni volta che cambi qualcosa:
 
 ```bash
-git add -A && git commit -m "modifiche" && git push
+cd "/Users/bots/Downloads/Personale/Viaggio New York/viaggio" && git add -A && git commit -m "modifiche" && git push
 ```
+
+### Controllo dopo la pubblicazione
+Che le chiavi siano arrivate davvero online, e non siano rimaste vuote:
+
+```bash
+curl -s https://alessandrobotti02.github.io/viaggio-new-york/js/config.js | grep -E "supabaseUrl|supabaseAnonKey"
+```
+
+Devono comparire due valori pieni. Se sono vuoti, hai compilato il file ma non hai fatto `git push`.
 
 ---
 
