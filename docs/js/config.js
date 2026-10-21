@@ -13,10 +13,10 @@
    ========================================================= */
 window.CONFIG = {
   // Esempio: "https://abcdefghijklm.supabase.co"
-  supabaseUrl: "",
+  supabaseUrl: "https://ufzogbspktlqghxkvwxb.supabase.co",
 
   // La chiave pubblica, lunga. Inizia con "eyJ..." oppure "sb_publishable_..."
-  supabaseAnonKey: "",
+  supabaseAnonKey: "sb_publishable_lKnprWhwyOVZS6Px1RT6QA_mGM3AU3E",
 
   // Nome della tabella creata dallo script SQL. Lascialo così.
   tabella: "itinerari"
