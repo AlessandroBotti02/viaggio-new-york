@@ -35,12 +35,26 @@ Il piano gratuito basta e avanza: siete sei persone che salvano una manciata di 
 Questo crea la tabella degli itinerari e — soprattutto — le regole che fanno sì che
 ognuno veda solo il proprio. Puoi rilanciarlo in futuro senza paura: non cancella niente.
 
-### 3. Chiudi le registrazioni
-Gli account li crei tu: nessuno deve potersi registrare da solo.
+### 3. Chiudi le registrazioni ⚠️ IL PASSO CHE SALTA PIÙ FACILMENTE
+
+Gli account li crei tu: nessuno deve potersi registrare da solo. **È l'unico passaggio
+che non si nota se lo dimentichi**, perché il sito funziona lo stesso.
 
 1. Menù a sinistra: **Authentication** → **Sign In / Providers**.
-2. Nella sezione **Email**, togli la spunta a **Allow new users to sign up**.
-3. Salva.
+2. Apri la sezione **Email**.
+3. Togli la spunta a **Allow new users to sign up** (in alcune versioni del pannello
+   si chiama **Enable sign ups**).
+4. **Save**.
+
+Per controllare che sia davvero chiuso, da Terminale:
+
+```bash
+cd "/Users/bots/Downloads/Personale/Viaggio New York/viaggio" && URL=$(grep -o 'supabaseUrl: "[^"]*"' docs/js/config.js | cut -d'"' -f2) && KEY=$(grep -o 'supabaseAnonKey: "[^"]*"' docs/js/config.js | cut -d'"' -f2) && curl -s -X POST "$URL/auth/v1/signup" -H "apikey: $KEY" -H "Content-Type: application/json" -d '{"email":"prova-chiusura@gmail.com","password":"QualunqueCosa2026!"}'
+```
+
+Deve rispondere **`"Signups not allowed for this instance"`**.
+Se invece ti restituisce un utente con un `id`, le registrazioni sono ancora aperte:
+torna al punto 2. (E vai in **Authentication → Users** a cancellare l'utente appena creato.)
 
 ### 4. Crea i sei account
 1. **Authentication** → **Users** → bottone **Add user** → **Create new user**.
