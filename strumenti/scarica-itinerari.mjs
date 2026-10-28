@@ -18,16 +18,28 @@ const QUI  = dirname(fileURLToPath(import.meta.url));
 const BASE = join(QUI, "..");
 const USCITA = join(QUI, "esportazione");
 
-const CHIAVE = process.env.SUPABASE_SERVICE_KEY;
-if (!CHIAVE) {
+/* --da-json: rigenera il report dall'ultimo scaricamento, senza chiave e senza rete */
+const DA_JSON = process.argv.includes("--da-json");
+
+/* ripuliamo: copia-incolla porta spesso dietro spazi, a capo o virgolette */
+const CHIAVE = (process.env.SUPABASE_SERVICE_KEY || "").trim().replace(/^["']|["']$/g, "").replace(/\s+/g, "");
+if (!DA_JSON && !CHIAVE) {
   console.error("\n  Manca la chiave. Rilancia così:\n");
   console.error('  read -rs "?Service role key: " K && SUPABASE_SERVICE_KEY="$K" node strumenti/scarica-itinerari.mjs; unset K\n');
   process.exit(1);
 }
-if (CHIAVE.startsWith("sb_publishable_") || CHIAVE.startsWith("eyJ") === false && CHIAVE.startsWith("sb_secret") === false) {
-  console.error("\n  Quella non sembra la chiave giusta.");
-  console.error("  Serve la SERVICE ROLE (Project Settings → API Keys → 'secret' / 'service_role'),");
-  console.error("  non la publishable che sta nel sito.\n");
+const segreta = CHIAVE.startsWith("sb_secret_") || CHIAVE.startsWith("eyJ");
+if (!DA_JSON) console.log(`\n  Chiave ricevuta (${CHIAVE.length} caratteri)`);
+if (!DA_JSON && CHIAVE.startsWith("sb_publishable_")) {
+  console.error("\n  ⛔ Questa è la chiave PUBBLICA, la stessa che sta nel sito.");
+  console.error("     Serve quella SEGRETA: Project Settings → API Keys → sezione 'secret'");
+  console.error("     (o 'service_role') → Reveal → Copy.\n");
+  process.exit(1);
+}
+if (!DA_JSON && !segreta) {
+  console.error("\n  ⛔ Non riconosco il formato. Una chiave valida inizia con 'sb_secret_'");
+  console.error("     oppure con 'eyJ' (le vecchie service_role).");
+  console.error("     Probabilmente il copia-incolla ha preso solo una parte.\n");
   process.exit(1);
 }
 
@@ -52,26 +64,84 @@ const FASCE = [
 
 const testa = { apikey: CHIAVE, Authorization: "Bearer " + CHIAVE };
 async function prendi(percorso) {
-  const r = await fetch(URL_SB + percorso, { headers: testa });
-  if (!r.ok) throw new Error(`${percorso} → HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  let r;
+  try { r = await fetch(URL_SB + percorso, { headers: testa }); }
+  catch (e) { fine("Non riesco a raggiungere il progetto.",
+    ["Controlla la connessione.",
+     "Se il progetto è in pausa, aprilo dal pannello Supabase e premi Restore project."]); }
+  if (r.status === 401 || r.status === 403) fine(
+    "La chiave non è stata accettata.",
+    ["Deve essere la riga 'service_role' / 'secret' in Project Settings → API Keys (bottone Reveal).",
+     "Copiala tutta: se è troncata, il server risponde comunque 'Invalid API key'.",
+     "Verifica che sia del progetto " + URL_SB.replace("https://","").split(".")[0] + " e non di un altro."]);
+  if (!r.ok) fine(`Il server ha risposto ${r.status} su ${percorso}`, [(await r.text()).slice(0, 300)]);
   return r.json();
 }
 
-console.log("\n  Scarico da", URL_SB, "…\n");
+function fine(titolo, righe) {
+  console.error("\n  ✗ " + titolo);
+  righe.forEach(x => console.error("    · " + x));
+  console.error("\n    Per riprovare:");
+  console.error('    read -rs "?Service role key: " K && SUPABASE_SERVICE_KEY="$K" node strumenti/scarica-itinerari.mjs; unset K\n');
+  process.exit(1);
+}
 
-const righe = await prendi("/rest/v1/itinerari?select=user_id,piano,aggiornato_il&order=aggiornato_il.desc");
-const utenti = await prendi("/auth/v1/admin/users?per_page=200");
+/* prima una prova a vuoto, per dare un errore comprensibile invece di uno stack */
+if (!DA_JSON) console.log("  Provo a collegarmi a", URL_SB, "…");
+if (!DA_JSON) {
+  const r = await fetch(URL_SB + "/rest/v1/itinerari?select=user_id&limit=1", { headers: testa });
+  if (r.status === 401) {
+    const corpo = await r.text();
+    console.error("\n  ⛔ Supabase rifiuta la chiave (401).");
+    console.error("     " + corpo.slice(0, 160));
+    console.error("\n  Le tre cause, in ordine di frequenza:");
+    console.error("   1. È stata copiata solo in parte, o con pezzi mancanti.");
+    console.error("      Nel pannello premi 'Reveal' e poi l'icona Copia, non selezionare col mouse.");
+    console.error("   2. È la chiave di un ALTRO progetto Supabase.");
+    console.error(`      Questo progetto è: ${URL_SB.replace("https://", "").split(".")[0]}`);
+    console.error("   3. È stata rigenerata di recente: in quel caso serve quella nuova.\n");
+    console.error("  In alternativa salta del tutto le chiavi: vedi strumenti/QUERY-SQL.md\n");
+    process.exit(1);
+  }
+  if (r.status === 404) {
+    console.error("\n  ⛔ La tabella 'itinerari' non esiste in questo progetto (404).");
+    console.error("     Lo script SQL non è stato eseguito, oppure è un altro progetto.\n");
+    process.exit(1);
+  }
+  if (!r.ok) {
+    console.error(`\n  ⛔ Il server risponde HTTP ${r.status}: ${(await r.text()).slice(0, 200)}\n`);
+    process.exit(1);
+  }
+  console.log("  ✓ chiave accettata\n");
+}
+
+let righe, utenti;
+if (DA_JSON) {
+  const prec = JSON.parse(readFileSync(join(USCITA, "itinerari.json"), "utf8"));
+  righe  = prec.map(p => ({ user_id: p.user_id, piano: p.piano, aggiornato_il: p.aggiornato_il }));
+  utenti = { users: prec.map(p => ({ id: p.user_id, email: p.email, last_sign_in_at: p.ultimoAccesso })) };
+  console.log("\n  Rigenero il report da strumenti/esportazione/itinerari.json …");
+} else {
+  righe  = await prendi("/rest/v1/itinerari?select=user_id,piano,aggiornato_il&order=aggiornato_il.desc");
+  utenti = await prendi("/auth/v1/admin/users?per_page=200");
+}
+const maiuscola = t => t ? t[0].toUpperCase() + t.slice(1) : "";
+/* nome@cognome.it → "Nome Cognome": due persone con lo stesso nome restano distinguibili */
+const etichetta = u => {
+  const m = u.user_metadata || {};
+  if (m.nome || m.display_name) return m.nome || m.display_name;
+  const [loc, dom = ""] = (u.email || "").split("@");
+  return (maiuscola(loc) + " " + maiuscola(dom.split(".")[0])).trim();
+};
 const anagrafe = Object.fromEntries((utenti.users || []).map(u => [u.id, {
-  email: u.email,
-  nome: (u.user_metadata && (u.user_metadata.nome || u.user_metadata.display_name)) || (u.email || "").split("@")[0],
-  ultimoAccesso: u.last_sign_in_at
+  email: u.email, nome: etichetta(u), ultimoAccesso: u.last_sign_in_at
 }]));
 
 mkdirSync(USCITA, { recursive: true });
 
 /* --- dati grezzi --- */
 const completo = righe.map(r => ({ ...anagrafe[r.user_id], user_id: r.user_id, aggiornato_il: r.aggiornato_il, piano: r.piano }));
-writeFileSync(join(USCITA, "itinerari.json"), JSON.stringify(completo, null, 2));
+if (!DA_JSON) writeFileSync(join(USCITA, "itinerari.json"), JSON.stringify(completo, null, 2));
 
 /* --- versione leggibile --- */
 const data = iso => iso ? new Date(iso).toLocaleString("it-IT", { day:"numeric", month:"long", hour:"2-digit", minute:"2-digit" }) : "mai";
@@ -116,10 +186,10 @@ for (const r of completo) {
   for (const g of Object.values(r.piano || {}))
     for (const a of Object.values(g || {}))
       for (const id of (a || []))
-        (conteggio[id] = conteggio[id] || new Set()).add(r.nome);
+        (conteggio[id] = conteggio[id] || new Map()).set(r.user_id, r.nome);
 }
 const classifica = Object.entries(conteggio)
-  .map(([id, chi]) => ({ id, n: chi.size, chi: [...chi], p: LUOGO[id] }))
+  .map(([id, chi]) => ({ id, n: chi.size, chi: [...chi.values()], p: LUOGO[id] }))
   .filter(x => x.p).sort((a, b) => b.n - a.n || a.p.n.localeCompare(b.p.n));
 
 md += `## Su cosa siete d'accordo\n\n`;
