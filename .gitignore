@@ -11,3 +11,7 @@ docs/js/config.local.js
 # il banco di prova non deve finire nella cartella pubblicata
 docs/_finto-supabase.js
 docs/_test.html
+
+# gli itinerari scaricati contengono le email dei partecipanti:
+# non devono MAI finire in un repository pubblico
+strumenti/esportazione/
